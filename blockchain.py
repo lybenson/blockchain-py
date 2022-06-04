@@ -24,6 +24,7 @@ class Blockchain:
         # 所有的节点信息
         self.nodes = set()
 
+        # 创建创世区块
         self.new_block(proof=0, previous_hash=1)
 
     # 注册节点
@@ -76,6 +77,7 @@ class Blockchain:
 
         return True
 
+    # 创建区块
     def new_block(self, proof, previous_hash=None):
         block = {
             'index': len(self.chain) + 1,
@@ -90,6 +92,7 @@ class Blockchain:
 
         return block
 
+    # 创建交易记录
     def new_transactions(self, sender, recipient, amount):
         self.current_transactions.append({
             'sender': sender,
@@ -99,22 +102,27 @@ class Blockchain:
 
         return self.last_block['index'] + 1
 
+    # 根据区块内容 生成hash
     @staticmethod
     def hash(block):
         block = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block).hexdigest()
 
+    # 获取最后一个区块内容
     @property
     def last_block(self):
         return self.chain[-1]
 
+    # 计算 proof
     def proof_of_work(self, last_proof: int) -> int:
         proof = 0
+        # 每次将 proof + 1, 直到将 last_proof + proof 经过hash运算后前4位是 0000
         while self.valid_proof(last_proof, proof) is False:
             proof += 1
 
         return proof
 
+    # 验证proof: last_proof + proof 经过hash运算后前4位是 0000
     def valid_proof(self, last_proof: int, proof: int) -> bool:
         guess = f'{last_proof}{proof}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
@@ -125,6 +133,7 @@ class Blockchain:
 app = Flask(__name__)
 blockChain = Blockchain()
 
+
 @app.route('/index', methods=['GET'])
 def index():
     return 'hello'
@@ -133,9 +142,7 @@ def index():
 # 创建交易
 @app.route('/transactions/new', methods=['POST'])
 def new_transactions():
-    print('00000000000')
     values = request.get_json()
-    print(values)
     required = ['sender', 'recipient', 'amount']
 
     if values is None:
@@ -155,11 +162,17 @@ def new_transactions():
 @app.route('/mine', methods=['GET'])
 def mine():
     last_block = blockChain.last_block
-    last_block = last_block['proof']
 
-    proof = blockChain.proof_of_work(last_block)
+    # 获取最新的区块的 proof
+    last_proof = last_block['proof']
 
+    # 根据 last_proof 生成新的 proof
+    proof = blockChain.proof_of_work(last_proof)
+
+    # 给自己添加奖励交易记录
     blockChain.new_transactions(sender=0, recipient='self address', amount=1)
+
+    # 创建区块
     block = blockChain.new_block(proof, None)
 
     response = {
@@ -176,7 +189,6 @@ def mine():
 # 返回整个链
 @app.route('/chain', methods=['GET'])
 def full_chain():
-    print(blockChain)
     response = {
         'chain': blockChain.chain,
         'length': len(blockChain.chain)
