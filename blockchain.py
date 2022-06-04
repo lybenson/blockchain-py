@@ -40,11 +40,14 @@ class Blockchain:
         max_length = len(self.chain)
         new_chain = self.chain
 
+        # 遍历所有的节点
         for node in neighbours:
             response = requests.get(f'http://{node}/chain')
             if response.status_code == 200:
                 response = response.json()
                 length = response['length']
+
+                # 所有的区块
                 chain = response['chain']
 
                 # 如果外部节点链的长度大于自身长度，且链有效
@@ -56,7 +59,7 @@ class Blockchain:
             self.chain = new_chain
             return True
 
-        return  False
+        return False
 
     # 验证链的有效性
     def valid_chain(self, chain):
